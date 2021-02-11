@@ -42,15 +42,23 @@ As this project is for the purpose of enhancing people's ability to make progres
 This work will be published shortly via ArXiv then in a peer-reviewed venue. Until then, you can cite the Flatland environment using the following:
 
 ```
-
-Beitel, Christopher. (2021). Flatland: A simulation environment for simplifying the development of polymer structure prediction tools. Zenodo. 10.5281/zenodo.4536540
-
+@misc{flatland2021,
+    title={Flatland: A simulation environment for simplifying the development of polymer structure prediction tools.},
+    author={Christopher Beitel},
+    year={2021},
+    howpublished={\url{https://github.com/cayley-group/flatland}, \url{https://doi.org/10.5281/zenodo.4536540}},
+    archivePrefix={Zenodo},
+}
 ```
 
 The same applies to the work-in-progress strategic review linked above:
 
 ```
-
-Beitel, Christopher. (2021). Brainstorming next-generation methods for biophysical simulation and biopolymer design. Zenodo. 10.5281/zenodo.4536538
-
+@misc{ngbiophysicsbrainstorm2021,
+    title={Brainstorming next-generation methods for biophysical simulation and biopolymer design.},
+    author={Christopher Beitel},
+    year={2021},
+    howpublished={\url{https://github.com/cayley-group/pub-review}, \url{https://doi.org/10.5281/zenodo.4536538}},
+    archivePrefix={Zenodo},
+}
 ```
