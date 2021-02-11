@@ -27,7 +27,7 @@ setuptools.setup(
     url="https://github.com/cayleygroup/flatland",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache 2.0",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
     packages=setuptools.find_packages(),
