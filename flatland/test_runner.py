@@ -10,8 +10,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Primary entrypoint for running Flatland simulations."""
+"""Tests of runner.py"""
+
+from flatland.runner import Runner
 
 
-class Runner(object):
-  pass
+def test_runner():
+
+  runner = Runner()
+
+  assert True
