@@ -1,0 +1,21 @@
+name: Style Check
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  check_yapf:
+    docker:
+    - image: circleci/python:3.7-node-browsers-legacy
+    steps:
+    - checkout
+    - run:
+        name: Get yapf
+        command: pip install yapf && export PATH=$PATH:$HOME/.local/bin
+    - run:
+        name: Python style check (yapf diff)
+        command: python tools/style_check.py --path=flatland
+
