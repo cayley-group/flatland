@@ -1,7 +1,7 @@
 # Flatland
 
 ![Test status](https://github.com/cayley-group/flatland/workflows/Test/badge.svg?branch=master)
-[![PyPI](https://img.shields.io/pypi/v/cg-flatland)](https://pypi.org/project/cg-flatland/)
+[![DOI](https://zenodo.org/badge/337879868.svg)](https://zenodo.org/badge/latestdoi/337879868)
 
 [Strategy Context Whitepaper](https://docs.google.com/document/d/1cMVCeON0DSIUaUSnoD4yAZSC1s0sEwxZnBiTgh8gbkk/edit?usp=sharing) | [Manuscript Working Doc](https://docs.google.com/document/d/19KuoO6f2GiGr6688aCDbZatNUPUOVvEtg0HgTaTYMbE/edit?usp=sharing)
 
@@ -34,3 +34,23 @@ We're putting together various demonstration notebooks which you'll be able to a
 
 * [Data Generation](https://colab.research.google.com/github/cayley-group/flatland/blob/master/nb/data-generation.ipynb)
 * [Structure Solver Example](https://colab.research.google.com/github/cayley-group/flatland/blob/master/nb/structure-solver.ipynb)
+
+As this project is for the purpose of enhancing people's ability to make progress in this problem area we do welcome requests and comments via [GitHub Issues](https://github.com/cayley-group/flatland/issues) for ways to enhance these in that regard (including of course bugs).
+
+### Citing this work
+
+This work will be published shortly via ArXiv then in a peer-reviewed venue. Until then, you can cite the Flatland environment using the following:
+
+```
+
+Beitel, Christopher. (2021). Flatland: A simulation environment for simplifying the development of polymer structure prediction tools. Zenodo. 10.5281/zenodo.4536540
+
+```
+
+The same applies to the work-in-progress strategic review linked above:
+
+```
+
+Beitel, Christopher. (2021). Brainstorming next-generation methods for biophysical simulation and biopolymer design. Zenodo. 10.5281/zenodo.4536538
+
+```
