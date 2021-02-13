@@ -23,8 +23,7 @@ Or install the most recent development version of Flatland using git
 
 ```bash
 
-git clone https://github.com/cayley-group/flatland
-pip install -e flatland
+pip install git+git://github.com/cayley-group/flatland.git
 
 ```
 
