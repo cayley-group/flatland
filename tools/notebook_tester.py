@@ -17,7 +17,10 @@ import argparse
 import sys
 import tempfile
 import json
+import nbformat
+import os
 
+from nbconvert.preprocessors import ExecutePreprocessor
 
 def _run(command):
   
@@ -52,25 +55,35 @@ def get_a_jupyter_kernel_name():
   return None
 
 
-def test_run(path):
+def test_run(notebook_path):
+  """Adapted from: https://www.blog.pythonlibrary.org/2018/10/16/testing-jupyter-notebooks/"""
 
   kernel_name = get_a_jupyter_kernel_name()
 
-  temp_output = tempfile.NamedTemporaryFile()
+  output_path = tempfile.NamedTemporaryFile().name
 
-  command = ["jupyter", "nbconvert", "--to", "notebook",
-             "--execute", "--ExecutePreprocessor.kernel_name='%s'" % kernel_name,
-             "--output", temp_output.name, path]
+  nb_name, _ = os.path.splitext(os.path.basename(notebook_path))
+  dirname = os.path.dirname(notebook_path)
 
-  output = _run(command)
+  with open(notebook_path) as f:
+    nb = nbformat.read(f, as_version=4)
 
-  print(output)
-  
-  # TODO: Check output for errors in the way described in 
-  # https://www.blog.pythonlibrary.org/2018/10/16/testing-jupyter-notebooks/
-  has_error = False
+  proc = ExecutePreprocessor(timeout=600, kernel_name=kernel_name)
+  proc.allow_errors = True
 
-  return has_error, output
+  proc.preprocess(nb, {'metadata': {'path': '/'}})
+
+  with open(output_path, mode='wt') as f:
+    nbformat.write(nb, f)
+
+  errors = []
+  for cell in nb.cells:
+    if 'outputs' in cell:
+      for output in cell['outputs']:
+        if output.output_type == 'error':
+          errors.append(output)
+
+  return nb, errors
 
 
 if __name__ == '__main__':
@@ -83,7 +96,7 @@ if __name__ == '__main__':
 
   args = parser.parse_args()
 
-  has_error, output = test_run(str(args.path))
+  nb, errors = test_run(str(args.path))
   
-  if has_error:
-    raise Exception(output)
+  if errors:
+    raise Exception(errors)
