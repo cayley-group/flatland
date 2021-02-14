@@ -19,15 +19,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install yapf pytest
-        export PATH=$PATH:$HOME/.local/bin
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install .[test]
     - name: Check style with YAPF
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        # flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         python tools/style_check.py --path=flatland
     - name: Test with pytest
       run: |
-        pytest
+        pytest flatland
+    - name: Test notebooks
+      run: |
+        python tools/notebook_tester.py --path=nb/structure-solver.ipynb
+        python tools/notebook_tester.py --path=nb/data-generation.ipynb
 

@@ -32,4 +32,7 @@ setuptools.setup(
     ],
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
+    extras_require = {
+        'test': ['pytest', 'yapf', 'jupyter', 'pytest-cov'],
+    }
 )
