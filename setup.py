@@ -14,7 +14,7 @@
 import setuptools
 
 with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+  long_description = fh.read()
 
 setuptools.setup(
     name="cg-flatland",
@@ -25,14 +25,23 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cayleygroup/flatland",
+    license="Apache 2.0",
     classifiers=[
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Bio-Informatics"
     ],
     packages=setuptools.find_packages(),
-    python_requires='>=3.6',
-    extras_require = {
-        'test': ['pytest', 'yapf', 'jupyter', 'pytest-cov'],
-    }
+    python_requires=">=3.6",
+    install_requires=["tensorflow_datasets", "tensorflow"],
+    extras_require={
+        #'tensorflow': ['tensorflow'], # In the future tensorflow import here
+        # because host may already have tensorflow-gpu?
+        "test": ["pytest", "yapf", "jupyter", "pytest-cov"],
+    },
+    keywords="protein folding",
 )
