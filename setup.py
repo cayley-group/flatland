@@ -37,7 +37,7 @@ setuptools.setup(
     ],
     packages=setuptools.find_packages(),
     python_requires=">=3.6",
-    install_requires=["tensorflow_datasets", "tensorflow"],
+    install_requires=["tensorflow_datasets>=4.2.0", "tensorflow>=2.4.0"],
     extras_require={
         #'tensorflow': ['tensorflow'], # In the future tensorflow import here
         # because host may already have tensorflow-gpu?
