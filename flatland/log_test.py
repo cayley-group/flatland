@@ -20,10 +20,8 @@ def test_training_logger():
   log_every = 10
   num_training_steps = 100
 
-  tl = TrainingLogger(
-    log_every=log_every,
-    num_training_steps=num_training_steps
-  )
+  tl = TrainingLogger(log_every=log_every,
+                      num_training_steps=num_training_steps)
 
   for i in range(num_training_steps):
     if i % log_every == 0:

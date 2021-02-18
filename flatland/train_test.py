@@ -18,5 +18,5 @@ from flatland.train import train_demo_solver
 def test_train_demo_solver():
 
   _ = train_demo_solver(training_log_every=2,
-        num_training_steps=10,
-        batch_size=4)
+                        num_training_steps=10,
+                        batch_size=4)

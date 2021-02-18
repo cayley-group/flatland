@@ -41,6 +41,7 @@ key = random.PRNGKey(0)
 
 ExampleStream = Iterator[Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]]
 
+
 def demo_example_stream(batch_size: int, split: str) -> ExampleStream:
 
   ds = tfds.load('flatland_mock', split=split)
@@ -71,13 +72,13 @@ def _configure_losses(key, batch_size: int, box_size: float,
   """Configure losses needed for the demo structure solver."""
 
   # Very temporary patch
-  positions, energies, forces = example_stream_fn(
-      batch_size=batch_size, split="train").__next__()
+  positions, energies, forces = example_stream_fn(batch_size=batch_size,
+                                                  split="train").__next__()
 
   displacement, shift = space.periodic(box_size)
 
   neighbor_fn, init_fn, energy_fn = energy.graph_network_neighbor_list(
-    displacement, box_size, r_cutoff=3.0, dr_threshold=0.0)
+      displacement, box_size, r_cutoff=3.0, dr_threshold=0.0)
 
   neighbor = neighbor_fn(positions[0], extra_capacity=6)
 
@@ -97,16 +98,17 @@ def _configure_losses(key, batch_size: int, box_size: float,
 
   @jit
   def energy_loss(params, R, energy_targets):
-    return jnp.mean((vectorized_energy_fn(params, R) - energy_targets) ** 2)
+    return jnp.mean((vectorized_energy_fn(params, R) - energy_targets)**2)
 
   @jit
   def force_loss(params, R, force_targets):
     dforces = vectorized_force_fn(params, R) - force_targets
-    return jnp.mean(jnp.sum(dforces ** 2, axis=(1, 2)))
+    return jnp.mean(jnp.sum(dforces**2, axis=(1, 2)))
 
   @jit
   def loss(params, R, targets):
-    return energy_loss(params, R, targets[0]) + force_loss(params, R, targets[1])
+    return energy_loss(params, R, targets[0]) + force_loss(
+        params, R, targets[1])
 
   def error_fn(params, positions, energies):
     return float(jnp.sqrt(energy_loss(params, positions, energies)))
@@ -117,22 +119,23 @@ def _configure_losses(key, batch_size: int, box_size: float,
 def configure_update_step(learning_rate: float, loss: Callable):
   """Configure an optax training update step."""
 
-  opt = optax.chain(optax.clip_by_global_norm(1.0),
-                    optax.adam(learning_rate))
+  opt = optax.chain(optax.clip_by_global_norm(1.0), optax.adam(learning_rate))
 
   @jit
   def _update_step(params, opt_state, positions, labels):
-    updates, opt_state = opt.update(grad(loss)(params, positions, labels),
-                                    opt_state)
+    updates, opt_state = opt.update(
+        grad(loss)(params, positions, labels), opt_state)
     return optax.apply_updates(params, updates), opt_state
 
   @jit
   def update_step(params_and_opt_state, batches):
+
     def inner_update(params_and_opt_state, batch):
       params, opt_state = params_and_opt_state
       b_xs, b_labels = batch
 
       return _update_step(params, opt_state, b_xs, b_labels), 0
+
     return lax.scan(inner_update, params_and_opt_state, batches)[0]
 
   return update_step, opt
@@ -153,20 +156,23 @@ def train_demo_solver(num_training_steps: int, training_log_every: int,
 
   """
 
-  loss, error_fn, params = _configure_losses(key, batch_size=16, box_size=10.862,
-                                             example_stream_fn=demo_example_stream)
+  loss, error_fn, params = _configure_losses(
+      key,
+      batch_size=16,
+      box_size=10.862,
+      example_stream_fn=demo_example_stream)
 
   update_step, opt = configure_update_step(learning_rate=1e-3, loss=loss)
 
   opt_state = opt.init(params)
 
-  tl = TrainingLogger(
-    log_every=training_log_every,
-    num_training_steps=num_training_steps)
+  tl = TrainingLogger(log_every=training_log_every,
+                      num_training_steps=num_training_steps)
 
   logging.info("Beginning training run.")
 
-  test_batch = demo_example_stream(batch_size=batch_size, split="test").__next__()
+  test_batch = demo_example_stream(batch_size=batch_size,
+                                   split="test").__next__()
   test_positions, test_energies, test_forces = test_batch
 
   train_example_iterator = demo_example_stream(batch_size, split="train")
@@ -174,7 +180,7 @@ def train_demo_solver(num_training_steps: int, training_log_every: int,
   for step_num, stream in enumerate(train_example_iterator):
 
     positions, energies, forces = stream
-    
+
     # ============
     # Hack
     positions = jnp.expand_dims(positions, axis=0)
@@ -193,15 +199,12 @@ def train_demo_solver(num_training_steps: int, training_log_every: int,
       train_error = error_fn(params, positions[0], energies[0])
       test_error = error_fn(params, test_positions, test_energies)
 
-      tl.log(test_error=test_error,
-             train_error=train_error,
-             step_num=step_num)
+      tl.log(test_error=test_error, train_error=train_error, step_num=step_num)
 
     packed_update_args = (params, opt_state)
     packed_update_batch = (positions, (energies, forces))
 
-    params, opt_state = update_step(
-        params_and_opt_state=packed_update_args,
-        batches=packed_update_batch)
+    params, opt_state = update_step(params_and_opt_state=packed_update_args,
+                                    batches=packed_update_batch)
 
   return params

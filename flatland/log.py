@@ -41,10 +41,8 @@ class TrainingLogger(object):
 
     write_idx = int(step_num / self.log_every)
 
-    self.test_history[write_idx] = {"error": test_error,
-                                    "step": step_num}
-    self.train_history[write_idx] = {"error": train_error,
-                                     "step": step_num}
+    self.test_history[write_idx] = {"error": test_error, "step": step_num}
+    self.train_history[write_idx] = {"error": train_error, "step": step_num}
 
     test_log_msg = "Test error is: %s" % (test_error)
     train_log_msg = "Train error is: %s" % (train_error)
