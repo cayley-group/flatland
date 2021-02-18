@@ -37,7 +37,15 @@ setuptools.setup(
     ],
     packages=setuptools.find_packages(),
     python_requires=">=3.6",
-    install_requires=["tensorflow_datasets>=4.2.0", "tensorflow>=2.4.0"],
+    install_requires=[
+        "tensorflow_datasets>=4.2.0",
+        "tensorflow>=2.4.0",
+        "optax>=0.0.2",
+        "jax-md",
+        "absl-py",
+        "jax"  # May need to include as an extra since the relevant Jax version
+        # should depend on the version of CUDA installed?
+    ],
     extras_require={
         #'tensorflow': ['tensorflow'], # In the future tensorflow import here
         # because host may already have tensorflow-gpu?
