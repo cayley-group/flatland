@@ -10,13 +10,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests of runner.py"""
+"""Tests of model training functions and utilities."""
 
-from flatland.runner import Runner
+from flatland.train import train_demo_solver
 
 
-def test_runner():
+def test_train_demo_solver():
 
-  runner = Runner()
-
-  assert True
+  _ = train_demo_solver(training_log_every=2,
+        num_training_steps=10,
+        batch_size=4)
