@@ -43,6 +43,7 @@ setuptools.setup(
         "optax>=0.0.2",
         "jax-md",
         "absl-py",
+        "matplotlib",
         "jax"  # May need to include as an extra since the relevant Jax version
         # should depend on the version of CUDA installed?
     ],
