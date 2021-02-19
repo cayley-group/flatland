@@ -17,6 +17,7 @@ import jax.numpy as jnp
 from flatland import evolution as evo
 from flatland import datagen
 
+
 def test_compile_dataset_for_population():
 
   alphabet_size = 3
@@ -26,7 +27,7 @@ def test_compile_dataset_for_population():
   num_generations = 2
 
   def fitness_mean_value_target(v, target_value=1.0):
-    return 1 - jnp.abs(jnp.mean(v) - target_value)/target_value
+    return 1 - jnp.abs(jnp.mean(v) - target_value) / target_value
 
   @jit
   def batched_fitness_mean_value_target(population):
@@ -35,14 +36,14 @@ def test_compile_dataset_for_population():
   key = random.PRNGKey(1)
 
   _, _, population = evo.evolve_with_mutation(
-    fitness_fn=batched_fitness_mean_value_target,
-    num_generations=num_generations,
-    pop_size=population_size,
-    genome_length=genome_length,
-    mutation_rate=mutation_rate,
-    alphabet_size=alphabet_size,
-    keep_full_population_history=True,
-    key=key)
+      fitness_fn=batched_fitness_mean_value_target,
+      num_generations=num_generations,
+      pop_size=population_size,
+      genome_length=genome_length,
+      mutation_rate=mutation_rate,
+      alphabet_size=alphabet_size,
+      keep_full_population_history=True,
+      key=key)
 
   dataset_path = datagen.compile_dataset_for_population(key, population)
   assert isinstance(dataset_path, str)

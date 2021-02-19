@@ -24,5 +24,6 @@ def test_simulate_polymer_brownian():
 
   key, _ = random.split(key)
 
-  positions, energy_fn = physics.simulate_polymer_brownian(
-    key=key, polymer=polymer, box_size=6.8)
+  positions, energy_fn = physics.simulate_polymer_brownian(key=key,
+                                                           polymer=polymer,
+                                                           box_size=6.8)

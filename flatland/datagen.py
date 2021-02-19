@@ -40,8 +40,8 @@ def compute_distances(positions: jnp.ndarray) -> np.ndarray:
 
   return distances
 
-def _compute_angle(p0: jnp.ndarray,
-                   p1: jnp.ndarray,
+
+def _compute_angle(p0: jnp.ndarray, p1: jnp.ndarray,
                    p2: jnp.ndarray) -> jnp.float32:
   """Compute the angle centered at `p1` between the other two points."""
 
@@ -54,24 +54,22 @@ def _compute_angle(p0: jnp.ndarray,
   c = p0 - p2
   dc = np.linalg.norm(c)
 
-  x = (da**2 + db**2 - dc**2)/(2.0*da*db)
+  x = (da**2 + db**2 - dc**2) / (2.0 * da * db)
 
-  angle = jnp.arccos(x)*180.0/jnp.pi
+  angle = jnp.arccos(x) * 180.0 / jnp.pi
 
   return min(angle, 360 - angle)
+
 
 def compute_bond_angles(positions: jnp.ndarray) -> jnp.ndarray:
 
   angles = np.zeros(shape=(len(positions) - 2,))
 
   for i in range(len(positions) - 2):
-    angles[i] = _compute_angle(
-      positions[i],
-      positions[i + 1],
-      positions[i + 2]
-    )
+    angles[i] = _compute_angle(positions[i], positions[i + 1], positions[i + 2])
 
   return angles
+
 
 def compile_dataset_for_population(key, population) -> str:
 
@@ -84,8 +82,9 @@ def compile_dataset_for_population(key, population) -> str:
 
   for i, polymer in enumerate(population):
 
-    positions, energy_fn = physics.simulate_polymer_brownian(
-      key=key, polymer=polymer, box_size=6.8)
+    positions, energy_fn = physics.simulate_polymer_brownian(key=key,
+                                                             polymer=polymer,
+                                                             box_size=6.8)
 
     positions_x = positions[:, 0]
     positions_y = positions[:, 1]
@@ -96,12 +95,12 @@ def compile_dataset_for_population(key, population) -> str:
     energy = energy_fn(positions)
 
     example = {
-      "aa_sequence": polymer,
-      "structure_energy": energy,
-      "structure_x": positions_x,
-      "structure_y": positions_y,
-      "solved_angles": angles,
-      "solved_distances": distances
+        "aa_sequence": polymer,
+        "structure_energy": energy,
+        "structure_x": positions_x,
+        "structure_y": positions_y,
+        "solved_angles": angles,
+        "solved_distances": distances
     }
 
     dataset[i] = example

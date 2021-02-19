@@ -61,8 +61,10 @@ def make_linear_layout(polymer_length: int, box_size: float) -> PolymerLayout:
 
   return jnp.array(positions), jnp.array(bonds), jnp.array(bond_lengths)
 
+
 # ========================================
 # From Jax MD (github/google/jax-md), below
+
 
 def run_brownian(energy_fn,
                  R_init,
@@ -89,6 +91,7 @@ def run_brownian(energy_fn,
 
   return state.position
 
+
 def harmonic_morse(dr, D0=5.0, alpha=5.0, r0=1.0, k=50.0, **kwargs):
   """Compute the harmonic morse potential for a pair of particles at distance `dr`."""
   U = jnp.where(
@@ -96,6 +99,7 @@ def harmonic_morse(dr, D0=5.0, alpha=5.0, r0=1.0, k=50.0, **kwargs):
       D0 * (jnp.exp(-2. * alpha * (dr - r0)) - 2. * jnp.exp(-alpha *
                                                             (dr - r0))))
   return jnp.array(U, dtype=dr.dtype)
+
 
 def harmonic_morse_pair(displacement_or_metric,
                         species=None,
@@ -122,8 +126,10 @@ def harmonic_morse_pair(displacement_or_metric,
       r0=r0,
       k=k)
 
+
 def bistable_spring(dr, r0=1.0, a2=2, a4=5, **kwargs):
   return (a4 * (dr - r0)**4 - a2 * (dr - r0)**2)
+
 
 def bistable_spring_bond(displacement_or_metric,
                          bond,
@@ -147,6 +153,7 @@ def bistable_spring_bond(displacement_or_metric,
 
 # From Jax MD (github/google/jax-md), above
 # =================
+
 
 def simulate_polymer_brownian(key,
                               polymer,
@@ -190,6 +197,7 @@ def simulate_polymer_brownian(key,
 
   return positions, combined_energy_fn
 
+
 def plot_system(positions, box_size, species=None, ms=10, bonds=[]):
   """Plot a bonded polymer system."""
 
@@ -204,9 +212,7 @@ def plot_system(positions, box_size, species=None, ms=10, bonds=[]):
     start = [coord_a[0], coord_b[0]]
     end = [coord_a[1], coord_b[1]]
 
-    plt.plot(start, end,
-             linewidth=4,
-             color="lightgrey")
+    plt.plot(start, end, linewidth=4, color="lightgrey")
 
   if species is None:
 
@@ -219,7 +225,7 @@ def plot_system(positions, box_size, species=None, ms=10, bonds=[]):
 
     for ii in range(jnp.amax(species) + 1):
 
-      temp = positions[species==ii]
+      temp = positions[species == ii]
       temp_x = temp[:, 0]
       temp_y = temp[:, 1]
 
