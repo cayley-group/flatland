@@ -19,10 +19,9 @@ from flatland import dataset
 
 def test_can_load_example_batch():
 
-  ds = tfds.load('flatland_base', split="train")
+  ds = tfds.load('flatland_mock', split="train")
   assert isinstance(ds, tf.data.Dataset)
 
   ds = ds.take(1).cache().repeat()
   for example in tfds.as_numpy(ds):
     break
-

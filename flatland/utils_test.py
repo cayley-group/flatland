@@ -22,10 +22,11 @@ def test_get_requester_project():
   test_project_name = "hello_world"
 
   os.environ["FLATLAND_REQUESTER_PAYS_PROJECT_ID"] = test_project_name
-  
+
   project_name = utils.get_requester_project()
 
   assert project_name == test_project_name
+
 
 def test_download_files_requester_pays():
   pass

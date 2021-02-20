@@ -14,6 +14,8 @@
 
 import os
 
+from absl import logging
+
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
@@ -23,6 +25,7 @@ from jax import random
 
 from flatland import utils
 from flatland import evolution as evo
+from flatland import datagen
 
 _DESCRIPTION = """
 The Flatland environment can be used to evolve datasets of the form used by current
@@ -64,16 +67,129 @@ _CITATION = """
 """
 
 
-def get_destination_blob_path(filename, test_train_validation,
-                              dataset_name, dataset_version):
+def get_destination_blob_path(filename, test_train_validation, dataset_name,
+                              dataset_version):
   """Return a blob path."""
   ttv = ["test", "train", "validation"]
   assert test_train_validation in ttv
-  return os.path.join(dataset_name, dataset_version,
-                      test_train_validation, filename)
+  return os.path.join(dataset_name, dataset_version, test_train_validation,
+                      filename)
+
 
 def _assert_valid_split_name(split):
   assert split in ["train", "test", "validation"]
+
+
+def _build_dataset_info(builder):
+  return tfds.core.DatasetInfo(
+      builder=builder,
+      description=_DESCRIPTION,
+      features=tfds.features.FeaturesDict({
+          'aa_sequence':
+              tfds.features.Sequence(tf.int32),
+          'alignments':
+              tfds.features.Sequence(tfds.features.Sequence(tf.int32)),
+          'compound_affinity':
+              tfds.features.Sequence(tf.float32),
+          'solved_distances':
+              tfds.features.Sequence(tf.float32),
+          'solved_angles':
+              tfds.features.Sequence(tf.float32),
+          'structure_x':
+              tfds.features.Sequence(tf.float32),
+          'structure_y':
+              tfds.features.Sequence(tf.float32),
+          'structure_energy':
+              tf.float32,
+      }),
+      supervised_keys=None,
+      homepage='https://github.com/cayley-group/flatland',
+      citation=_CITATION,
+  )
+
+
+def _build_split_generators(train_paths, test_paths, validation_paths):
+  return [
+      tfds.core.SplitGenerator(
+          name=tfds.Split.TRAIN,
+          gen_kwargs={'filepaths': train_paths},
+      ),
+      tfds.core.SplitGenerator(
+          name=tfds.Split.TEST,
+          gen_kwargs={'filepaths': test_paths},
+      ),
+      tfds.core.SplitGenerator(
+          name=tfds.Split.VALIDATION,
+          gen_kwargs={'filepaths': validation_paths},
+      ),
+  ]
+
+
+class FlatlandMock(tfds.core.GeneratorBasedBuilder):
+  """DatasetBuilder for mock/randomly-generated Flatland dataset.
+
+  This dataset is of the same shape as the rest of the Flatland datasets
+  but where all values are randomly generated. This is useful for testing
+  within the Flatland project but developers might also find it convenient
+  to work with at the earliest stages of model development - e.g. when
+  seeing if a new model can at least over-fit on a small random dataset.
+
+  """
+
+  VERSION = tfds.core.Version('0.0.1')
+
+  def _info(self) -> tfds.core.DatasetInfo:
+    """Returns the dataset metadata."""
+    return _build_dataset_info(builder=self)
+
+  def _split_generators(self, dl_manager: tfds.download.DownloadManager):
+    """Download the data and define splits."""
+    return _build_split_generators(train_paths=None,
+                                   test_paths=None,
+                                   validation_paths=None)
+
+  def _simulation_config(self):
+    return evo.SimulationConfig(alphabet_size=3,
+                                pop_size=2,
+                                genome_length=10,
+                                mutation_rate=0.15,
+                                num_generations=2,
+                                keep_full_population_history=True,
+                                report_every=10)
+
+  def _generate_examples(self, filepaths) -> Iterator[Tuple[str, dict]]:
+    """Generator of examples for each split."""
+
+    logging.debug("Processing filepaths: %s" % filepaths)
+
+    cfg = self._simulation_config()
+    alphabet_size = cfg.alphabet_size
+    polymer_length = cfg.genome_length
+    num_alignments = 5
+    num_examples = 1000
+    num_compounds = 100
+
+    aa_shape = (polymer_length,)
+    alignments_shape = (
+        num_alignments,
+        polymer_length,
+    )
+    compounds_shape = (num_compounds,)
+
+    distances_shape = (polymer_length**2,)
+
+    for i in range(num_examples):
+      yield str(i), {
+          'aa_sequence': np.random.randint(0, alphabet_size, aa_shape),
+          'alignments': np.random.randint(0, alphabet_size, alignments_shape),
+          'compound_affinity': np.random.random(compounds_shape),
+          'solved_distances': np.random.random(distances_shape),
+          'solved_angles': np.random.random((polymer_length - 1,)),
+          'structure_x': np.random.random((polymer_length,)),
+          'structure_y': np.random.random((polymer_length,)),
+          'structure_energy': np.random.random()
+      }
+
 
 class FlatlandBase(tfds.core.GeneratorBasedBuilder):
   """DatasetBuilder for `flatland` dataset."""
@@ -82,50 +198,21 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
 
   def _info(self) -> tfds.core.DatasetInfo:
     """Returns the dataset metadata."""
-
-    return tfds.core.DatasetInfo(
-        builder=self,
-        description=_DESCRIPTION,
-        features=tfds.features.FeaturesDict({
-            'aa_sequence':
-                tfds.features.Sequence(tf.int32),
-            'alignments':
-                tfds.features.Sequence(tfds.features.Sequence(tf.int32)),
-            'compound_affinity':
-                tfds.features.Sequence(tf.float32),
-            'solved_distances':
-                tfds.features.Sequence(tf.float32),
-            'solved_angles':
-                tfds.features.Sequence(tf.float32),
-            'structure_x':
-                tfds.features.Sequence(tf.float32),
-            'structure_y':
-                tfds.features.Sequence(tf.float32),
-            'structure_energy':
-                tf.float32,
-        }),
-        supervised_keys=None,
-        homepage='https://github.com/cayley-group/flatland',
-        citation=_CITATION,
-    )
+    return _build_dataset_info(builder=self)
 
   def _simulation_config(self):
     # To be converted to a namedtuple that is tested for integration with
     # the evolution portion of the code.
-    return {
-      "alphabet_size":  3,
-      "population_size": 10,
-      "genome_length": 10,
-      "mutation_rate": 0.15,
-      "num_generations": 2
-    }
+    return evo.SimulationConfig(alphabet_size=3,
+                                pop_size=2,
+                                genome_length=10,
+                                mutation_rate=0.15,
+                                num_generations=2,
+                                keep_full_population_history=True,
+                                report_every=10)
 
   def _sim_shard_sizes(self):
-    return {
-      "test": 1,
-      "train": 1,
-      "validation": 1
-    }
+    return {"test": 1, "train": 1, "validation": 1}
 
   def _sim_shard_paths(self, split):
 
@@ -135,11 +222,10 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
 
     for i in range(num_sim_shards):
 
-      sim_path = get_destination_blob_path(
-        filename="sim-%s.pkl" % i,
-        test_train_validation=split,
-        dataset_name=self.name,
-        dataset_version=str(self.VERSION))
+      sim_path = get_destination_blob_path(filename="sim-%s.pkl" % i,
+                                           test_train_validation=split,
+                                           dataset_name=self.name,
+                                           dataset_version=str(self.VERSION))
 
       sim_paths[i] = sim_path
 
@@ -170,9 +256,9 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
     bucket_name = self.sim_bucket_name()
 
     path_lookup = {
-      "train": self._train_sim_paths,
-      "test": self._test_sim_paths,
-      "validation": self._validation_sim_paths
+        "train": self._train_sim_paths,
+        "test": self._test_sim_paths,
+        "validation": self._validation_sim_paths
     }
 
     paths = path_lookup[split]()
@@ -180,13 +266,13 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
 
     key, subkey = random.split(key)
 
-    sim_config = self._simulation_config()
-
     _, _, population = evo.evolve_with_mutation(
-      key=key, **sim_config)
+        key=key,
+        fitness_fn=evo.batched_fitness_mean_value_target,
+        **dict(self._simulation_config()._asdict()))
 
     local_dataset_path = datagen.compile_dataset_for_population(
-      subkey, population)
+        subkey, population)
 
     utils.upload_blob(bucket_name=bucket_name,
                       source_file_name=local_dataset_path,
@@ -210,7 +296,7 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
     # a special DL manager.
     del dl_manager
 
-    local_tmp_dir = "/tmp" # Should allow the user to customize this.
+    local_tmp_dir = "/tmp"  # Should allow the user to customize this.
 
     bucket_name = self.sim_bucket_name()
     requester_project = utils.get_requester_project()
@@ -218,50 +304,38 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
     train_paths_remote = self._train_sim_paths()
     #utils.ensure_paths_exist(train_paths_remote)
     train_paths_local = utils.download_files_requester_pays(
-      bucket_name=bucket_name,
-      paths=train_paths_remote,
-      requester_project=requester_project,
-      local_tmp_dir=local_tmp_dir
-    )
+        bucket_name=bucket_name,
+        paths=train_paths_remote,
+        requester_project=requester_project,
+        local_tmp_dir=local_tmp_dir)
 
     test_paths_remote = self._test_sim_paths()
     #utils.ensure_paths_exist(test_paths_remote)
     test_paths_local = utils.download_files_requester_pays(
-      bucket_name=bucket_name,
-      paths=test_paths_remote,
-      requester_project=requester_project,
-      local_tmp_dir=local_tmp_dir
-    )
+        bucket_name=bucket_name,
+        paths=test_paths_remote,
+        requester_project=requester_project,
+        local_tmp_dir=local_tmp_dir)
 
     validation_paths_remote = self._validation_sim_paths()
     #utils.ensure_paths_exist(validation_paths_remote)
     validation_paths_local = utils.download_files_requester_pays(
-      bucket_name=bucket_name,
-      paths=validation_paths_remote,
-      requester_project=requester_project,
-      local_tmp_dir=local_tmp_dir
-    )
+        bucket_name=bucket_name,
+        paths=validation_paths_remote,
+        requester_project=requester_project,
+        local_tmp_dir=local_tmp_dir)
 
-    return [
-        tfds.core.SplitGenerator(
-            name=tfds.Split.TRAIN,
-            gen_kwargs={'filepaths': train_paths_local},
-        ),
-        tfds.core.SplitGenerator(
-            name=tfds.Split.TEST,
-            gen_kwargs={'filepaths': test_paths_local},
-        ),
-        tfds.core.SplitGenerator(
-            name=tfds.Split.VALIDATION,
-            gen_kwargs={'filepaths': validation_paths_local},
-        ),
-    ]
+    return _build_split_generators(train_paths=train_paths_local,
+                                   test_paths=test_paths_local,
+                                   validation_paths=validation_paths_local)
 
   def _generate_examples(self, filepaths) -> Iterator[Tuple[str, dict]]:
     """Generator of examples for each split.
     
     For now, generate dummy data of the same shape we intend to generate.
     """
+
+    logging.debug("Processing filepaths: %s" % filepaths)
 
     alphabet_size = 4
     polymer_length = 10

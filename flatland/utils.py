@@ -20,6 +20,19 @@ from typing import List
 from google.cloud import storage
 
 
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+  """Uploads a file to the bucket."""
+
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(destination_blob_name)
+
+  blob.upload_from_filename(source_file_name)
+
+  logging.info("File {} uploaded to {}.".format(source_file_name,
+                                                destination_blob_name))
+
+
 def get_requester_project():
 
   env_tag = "FLATLAND_REQUESTER_PAYS_PROJECT_ID"
@@ -36,28 +49,25 @@ def get_requester_project():
 
   return os.environ[env_tag]
 
-def download_file_requester_pays(bucket_name: str,
-                                 project_id: str,
+
+def download_file_requester_pays(bucket_name: str, project_id: str,
                                  source_blob_name: str,
                                  destination_file_name: str):
-    """Download file using specified project as the requester."""
+  """Download file using specified project as the requester."""
 
-    storage_client = storage.Client()
+  storage_client = storage.Client()
 
-    bucket = storage_client.bucket(bucket_name, user_project=project_id)
-    blob = bucket.blob(source_blob_name)
-    blob.download_to_filename(destination_file_name)
+  bucket = storage_client.bucket(bucket_name, user_project=project_id)
+  blob = bucket.blob(source_blob_name)
+  blob.download_to_filename(destination_file_name)
 
-    logging.info(
-        "Blob {} downloaded to {} using a requester-pays request.".format(
-            source_blob_name, destination_file_name
-        )
-    )
+  logging.info(
+      "Blob {} downloaded to {} using a requester-pays request.".format(
+          source_blob_name, destination_file_name))
 
-def download_files_requester_pays(bucket_name: str,
-                                  paths: List[str],
-                                  requester_project: str,
-                                  local_tmp_dir: str):
+
+def download_files_requester_pays(bucket_name: str, paths: List[str],
+                                  requester_project: str, local_tmp_dir: str):
   """Download a collection of files from a requester-pays GCS bucket.
 
   Notable here is that `local_tmp_dir` specifies a root tmp data directory
@@ -72,7 +82,9 @@ def download_files_requester_pays(bucket_name: str,
 
   """
 
-  for path in paths:
+  local_file_paths = [None for _ in paths]
+
+  for i, path in enumerate(paths):
 
     if path[0] == "/":
       path = path[1:]
@@ -86,3 +98,7 @@ def download_files_requester_pays(bucket_name: str,
                                  project_id=requester_project,
                                  source_blob_name=path,
                                  destination_file_name=local_path)
+
+    local_file_paths[i] = local_path
+
+  return local_file_paths
