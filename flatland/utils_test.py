@@ -10,19 +10,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests of Tensorflow Datasets dataset."""
+"""Tests of utils."""
 
-import tensorflow as tf
-import tensorflow_datasets as tfds
-from flatland import dataset
+import os
+
+from flatland import utils
 
 
-def test_can_load_example_batch():
+def test_get_requester_project():
 
-  ds = tfds.load('flatland_base', split="train")
-  assert isinstance(ds, tf.data.Dataset)
+  test_project_name = "hello_world"
 
-  ds = ds.take(1).cache().repeat()
-  for example in tfds.as_numpy(ds):
-    break
+  os.environ["FLATLAND_REQUESTER_PAYS_PROJECT_ID"] = test_project_name
+  
+  project_name = utils.get_requester_project()
 
+  assert project_name == test_project_name
+
+def test_download_files_requester_pays():
+  pass
