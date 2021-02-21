@@ -29,6 +29,7 @@ def test_can_load_mock_example():
   for example in tfds.as_numpy(ds):
     break
 
+
 def test_can_load_base_example():
   """Test an example can be loaded for the base dataset.
   
@@ -43,6 +44,7 @@ def test_can_load_base_example():
   ds = ds.cache().repeat()
   for example in tfds.as_numpy(ds):
     break
+
 
 def test_flatland_base_e2e():
 
@@ -67,8 +69,7 @@ def test_flatland_base_e2e():
   # Do a mock run for all shards for all of train/test/validation
   for split, split_size in base._sim_shard_sizes().items():
     for shard_id in range(split_size):
-      base.simulate_dataset(split=split,
-                            shard_id=shard_id)
+      base.simulate_dataset(split=split, shard_id=shard_id)
 
   base.download_and_prepare()
 
