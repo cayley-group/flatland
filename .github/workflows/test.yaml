@@ -36,6 +36,8 @@ jobs:
         FLATLAND_REQUESTER_PAYS_PROJECT_ID=cayley-group-test FLATLAND_TEST_BUCKET=cg-flatland-test pytest flatland
     - name: Test notebooks
       run: |
+        export FLATLAND_REQUESTER_PAYS_PROJECT_ID=cayley-group-test
+        export FLATLAND_TEST_BUCKET=cg-flatland-test
         python tools/notebook_tester.py --path=nb/structure-solver.ipynb
         python tools/notebook_tester.py --path=nb/data-generation.ipynb
 
