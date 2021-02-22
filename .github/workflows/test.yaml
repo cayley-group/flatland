@@ -22,6 +22,8 @@ jobs:
         project_id: ${{ secrets.GCP_TEST_PROJECT_ID }}
         service_account_key: ${{ secrets.GCP_TEST_SA_KEY }}
         export_default_credentials: true
+    - name: Use gcloud CLI
+      run: gcloud info
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -31,7 +33,7 @@ jobs:
         python tools/style_check.py --path=flatland
     - name: Test with pytest
       run: |
-        FLATLAND_REQUESTER_PAYS_PROJECT_ID=${{ secrets.GCP_TEST_PROJECT_ID }} FLATLAND_TEST_BUCKET=${{ secrets.FLATLAND_TEST_BUCKET }} pytest flatland
+        FLATLAND_REQUESTER_PAYS_PROJECT_ID=cayley-group-test FLATLAND_TEST_BUCKET=cg-flatland-test pytest flatland
     - name: Test notebooks
       run: |
         python tools/notebook_tester.py --path=nb/structure-solver.ipynb
