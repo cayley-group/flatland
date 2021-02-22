@@ -20,11 +20,18 @@ from typing import List
 from google.cloud import storage
 
 
-def upload_blob(bucket_name, source_file_name, destination_blob_name):
-  """Uploads a file to the bucket."""
+def upload_blob(user_project_id, bucket_name, source_file_name,
+                destination_blob_name):
+  """Uploads a file to the bucket.
+  
+  Args:
+    user_project_id: A project to bill for requester-pays operations.
+
+  """
 
   storage_client = storage.Client()
-  bucket = storage_client.bucket(bucket_name)
+  bucket = storage_client.bucket(bucket_name,
+                                 user_project=user_project_id)
   blob = bucket.blob(destination_blob_name)
 
   blob.upload_from_filename(source_file_name)

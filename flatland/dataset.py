@@ -276,7 +276,8 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
 
     utils.upload_blob(bucket_name=bucket_name,
                       source_file_name=local_dataset_path,
-                      destination_blob_name=destination_path)
+                      destination_blob_name=destination_path,
+                      user_project_id=utils.get_requester_project())
 
   def sim_bucket_name(self):
     """The remote bucket in which to store the simulated dataset.
