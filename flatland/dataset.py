@@ -287,7 +287,7 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
     data will either be written or read from your bucket (respectively).
 
     """
-    return "test-1234-abcd"
+    return "cg-pub"
 
   def _split_generators(self, dl_manager: tfds.download.DownloadManager):
     """Download the data and define splits."""
