@@ -42,6 +42,7 @@ setuptools.setup(
         "tensorflow>=2.4.0",
         "optax>=0.0.2",
         "jax-md",
+        "google-cloud-storage",
         "absl-py",
         "matplotlib",
         "jax"  # May need to include as an extra since the relevant Jax version
