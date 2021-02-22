@@ -49,5 +49,5 @@ if __name__ == '__main__':
   diff = yapf_diff(args.path)
 
   if diff:
-    msg = "yapf --diff is nonempty, run yapf -r --in-pace [path]"
+    msg = "yapf --diff is nonempty, run yapf -r --in-place [path]"
     raise Exception(msg)

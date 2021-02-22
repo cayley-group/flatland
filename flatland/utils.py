@@ -30,8 +30,7 @@ def upload_blob(user_project_id, bucket_name, source_file_name,
   """
 
   storage_client = storage.Client()
-  bucket = storage_client.bucket(bucket_name,
-                                 user_project=user_project_id)
+  bucket = storage_client.bucket(bucket_name, user_project=user_project_id)
   blob = bucket.blob(destination_blob_name)
 
   blob.upload_from_filename(source_file_name)
