@@ -110,9 +110,13 @@ def compile_dataset_for_population(key, population) -> str:
 
   logging.info("Finished generating examples, writing to disk.")
 
-  name = None
-  with tempfile.NamedTemporaryFile() as out_file:
-    pickle.dump(dataset, out_file)
-    name = out_file.name
+  # Generate a unique file path
+  out_file_path = None
+  with tempfile.NamedTemporaryFile() as temp_out_file:
+    out_file_path = temp_out_file.name
 
-  return name
+  # Write to a file with that name but that is not temporary
+  with open(out_file_path, "wb") as out_file:
+    pickle.dump(dataset, out_file)
+
+  return out_file_path

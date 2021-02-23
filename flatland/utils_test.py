@@ -10,14 +10,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests of model training functions and utilities."""
+"""Tests of utils."""
 
-from flatland.train import train_demo_solver
+import os
+
+from flatland import utils
 
 
-def test_train_demo_solver():
+def test_get_requester_project():
+
+  test_project_name = "hello_world"
+
+  os.environ["FLATLAND_REQUESTER_PAYS_PROJECT_ID"] = test_project_name
+
+  project_name = utils.get_requester_project()
+
+  assert project_name == test_project_name
+
+
+def test_download_files_requester_pays():
   pass
-
-  #_ = train_demo_solver(training_log_every=2,
-  #                      num_training_steps=2,
-  #                      batch_size=4)

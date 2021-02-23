@@ -23,6 +23,8 @@ from jax import random, jit, vmap
 from matplotlib import pyplot
 import numpy as np
 
+from collections import namedtuple
+
 from typing import Tuple
 
 key = random.PRNGKey(0)
@@ -137,6 +139,21 @@ def resample_population(key: jnp.ndarray, population: Population,
                                  replace=True)
 
   return jnp.stack([population[i] for i in retain_members])
+
+
+SimulationConfig = namedtuple("SimulationConfig", [
+    "keep_full_population_history", "num_generations", "pop_size",
+    "genome_length", "report_every", "mutation_rate", "alphabet_size"
+])
+
+
+def fitness_mean_value_target(v, target_value=1.0):
+  return 1 - jnp.abs(jnp.mean(v) - target_value) / target_value
+
+
+@jit
+def batched_fitness_mean_value_target(population):
+  return vmap(fitness_mean_value_target)(population)
 
 
 def evolve_with_mutation(key,
