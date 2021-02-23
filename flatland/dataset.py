@@ -148,7 +148,7 @@ class FlatlandMock(tfds.core.GeneratorBasedBuilder):
                                    test_paths=None,
                                    validation_paths=None)
 
-  def _simulation_config(self):
+  def simulation_config(self):
     return evo.SimulationConfig(alphabet_size=3,
                                 pop_size=2,
                                 genome_length=10,
@@ -162,7 +162,7 @@ class FlatlandMock(tfds.core.GeneratorBasedBuilder):
 
     logging.debug("Processing filepaths: %s" % filepaths)
 
-    cfg = self._simulation_config()
+    cfg = self.simulation_config()
     alphabet_size = cfg.alphabet_size
     polymer_length = cfg.genome_length
     num_alignments = 5
@@ -200,7 +200,7 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
     """Returns the dataset metadata."""
     return _build_dataset_info(builder=self)
 
-  def _simulation_config(self):
+  def simulation_config(self):
     # To be converted to a namedtuple that is tested for integration with
     # the evolution portion of the code.
     return evo.SimulationConfig(alphabet_size=3,
@@ -269,7 +269,7 @@ class FlatlandBase(tfds.core.GeneratorBasedBuilder):
     _, _, population = evo.evolve_with_mutation(
         key=key,
         fitness_fn=evo.batched_fitness_mean_value_target,
-        **dict(self._simulation_config()._asdict()))
+        **dict(self.simulation_config()._asdict()))
 
     local_dataset_path = datagen.compile_dataset_for_population(
         subkey, population)
