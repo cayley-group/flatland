@@ -20,26 +20,43 @@ notebook of JAX MD (see github/google/jax-md).
 from absl import logging
 logging.set_verbosity(logging.INFO)
 
-import optax
-from jax_md import energy, space, simulate, quantity
-from functools import partial
-
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import flatland.dataset
 
-import numpy as np
+import jax
+from jax import random, vmap, jit, grad
 import jax.numpy as jnp
-from jax import vmap, jit, grad, random, lax
+import numpy as np
 
-from typing import Iterator, Tuple
-from collections.abc import Callable
+from jax import lax
 
 from flatland.log import TrainingLogger
+
+import optax
+
+import haiku as hk
+from typing import Callable, List, Iterator, Tuple, Any, Dict  #Callable, Tuple, TextIO, Dict, Any, Optional
+from jax_md import nn
+
+from jax_md import energy, util, space, partition, simulate, quantity
+
+from functools import partial
+from jax_md.energy import _canonicalize_node_state
 
 key = random.PRNGKey(0)
 
 ExampleStream = Iterator[Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]]
+
+Array = util.Array
+
+PyTree = Any
+Box = space.Box
+DisplacementFn = space.DisplacementFn
+DisplacementOrMetricFn = space.DisplacementOrMetricFn
+
+NeighborFn = partition.NeighborFn
+NeighborList = partition.NeighborList
 
 
 def demo_example_stream(batch_size: int, split: str) -> ExampleStream:
@@ -49,7 +66,9 @@ def demo_example_stream(batch_size: int, split: str) -> ExampleStream:
 
   ds = ds.cache().repeat().batch(batch_size)
 
-  # The source dataset can be reworked so this isn't necessary
+  # HACK: The plan is to re-work the source dataset to produce things
+  # with a (length, dimensions) shape coming in to remove this from
+  # the processing stream.
   def reshape(x, y):
     return jnp.ravel(jnp.array([x, y]), order="F").reshape(10, 2)
 
@@ -67,7 +86,128 @@ def demo_example_stream(batch_size: int, split: str) -> ExampleStream:
     yield positions, energies, forces
 
 
-def _configure_losses(key, batch_size: int, box_size: float,
+# Only slight modification from github/google/jax-md
+def graph_network_neighbor_list(
+    network,
+    polymer_length: int,
+    polymer_dimensions: int,
+    displacement_fn: DisplacementFn,
+    box_size: Box,
+    r_cutoff: float,
+    dr_threshold: float,
+    nodes: Array = None,
+    n_recurrences: int = 2,
+    mlp_sizes: Tuple[int, ...] = (64, 64),
+    mlp_kwargs: Dict[str, Any] = None
+) -> Tuple[NeighborFn, nn.InitFn, Callable[[PyTree, Array, NeighborList],
+                                           Array]]:
+  """Convenience wrapper around EnergyGraphNet model using neighbor lists.
+
+  Args:
+    network: The class name of a network to initialize.
+    displacement_fn: Function to compute displacement between two positions.
+    box_size: The size of the simulation volume, used to construct neighbor
+      list.
+    r_cutoff: A floating point cutoff; Edges will be added to the graph
+      for pairs of particles whose separation is smaller than the cutoff.
+    dr_threshold: A floating point number specifying a "halo" radius that we use
+      for neighbor list construction. See `neighbor_list` for details.
+    nodes: None or an ndarray of shape `[N, node_dim]` specifying the state
+      of the nodes. If None this is set to the zeroes vector. Often, for a
+      system with multiple species, this could be the species id.
+    n_recurrences: The number of steps of message passing in the graph network.
+    mlp_sizes: A tuple specifying the layer-widths for the fully-connected
+      networks used to update the states in the graph network.
+    mlp_kwargs: A dict specifying args for the fully-connected networks used to
+      update the states in the graph network.
+
+  Returns:
+    A pair of functions. An `params = init_fn(key, R)` that instantiates the
+    model parameters and an `E = apply_fn(params, R)` that computes the energy
+    for a particular state.
+
+  """
+
+  nodes = _canonicalize_node_state(nodes)
+
+  @hk.without_apply_rng
+  @hk.transform
+  def model(R, neighbor, **kwargs):
+    N = R.shape[0]
+
+    d = partial(displacement_fn, **kwargs)
+    d = space.map_neighbor(d)
+    R_neigh = R[neighbor.idx]
+    dR = d(R, R_neigh)
+
+    if 'nodes' in kwargs:
+      _nodes = _canonicalize_node_state(kwargs['nodes'])
+    else:
+      _nodes = jnp.zeros((N, 1), R.dtype) if nodes is None else nodes
+
+    _globals = jnp.zeros((1,), R.dtype)
+
+    dr_2 = space.square_distance(dR)
+    edge_idx = jnp.where(dr_2 < r_cutoff**2, neighbor.idx, N)
+
+    net = network(n_recurrences=n_recurrences,
+                  mlp_sizes=mlp_sizes,
+                  mlp_kwargs=mlp_kwargs,
+                  polymer_length=polymer_length,
+                  polymer_dimensions=polymer_dimensions)
+
+    return net(nn.GraphTuple(_nodes, dR, _globals, edge_idx))  # pytype: disable=wrong-arg-count
+
+  neighbor_fn = partition.neighbor_list(displacement_fn,
+                                        box_size,
+                                        r_cutoff,
+                                        dr_threshold,
+                                        mask_self=False)
+
+  init_fn, apply_fns = model.init, model.apply
+
+  return neighbor_fn, init_fn, apply_fns
+
+
+class OrigamiNet(hk.Module):
+  """Extends jax-md EnergyGraphNet to also learn to min structure energy.
+
+  See github/google/jax-md/jax-md/energy.py for the original implementation.
+
+  """
+
+  def __init__(self,
+               polymer_length: int,
+               polymer_dimensions: int,
+               n_recurrences: int,
+               mlp_sizes: Tuple[int, ...],
+               mlp_kwargs: Dict[str, Any] = None,
+               name: str = 'Energy'):
+    super().__init__(name=name)
+
+    if mlp_kwargs is None:
+      mlp_kwargs = {
+          'w_init': hk.initializers.VarianceScaling(),
+          'b_init': hk.initializers.VarianceScaling(0.1),
+          'activation': jax.nn.softplus
+      }
+
+    self._graph_net = nn.GraphNetEncoder(n_recurrences, mlp_sizes, mlp_kwargs)
+
+    structure_size = polymer_length * polymer_dimensions
+    self._decoder = hk.nets.MLP(output_sizes=mlp_sizes + (structure_size + 1,),
+                                activate_final=False,
+                                name='GlobalDecoder',
+                                **mlp_kwargs)
+
+  def __call__(self, graph: nn.GraphTuple) -> jnp.ndarray:
+    """Produce energy and structure predictions."""
+    output = self._graph_net(graph)
+    return self._decoder(output.globals)
+
+
+def _configure_losses(key, batch_size: int, polymer_length: int,
+                      polymer_dimensions: int, box_size: float,
                       example_stream_fn: Callable):
   """Configure losses needed for the demo structure solver."""
 
@@ -75,21 +215,42 @@ def _configure_losses(key, batch_size: int, box_size: float,
   positions, energies, forces = example_stream_fn(batch_size=batch_size,
                                                   split="train").__next__()
 
+  _, polymer_length, polymer_dimensions = positions.shape
+
   displacement, shift = space.periodic(box_size)
 
-  neighbor_fn, init_fn, energy_fn = energy.graph_network_neighbor_list(
-      displacement, box_size, r_cutoff=3.0, dr_threshold=0.0)
+  neighbor_fn, init_fn, origami_fn = graph_network_neighbor_list(
+      network=OrigamiNet,
+      polymer_length=polymer_length,
+      polymer_dimensions=polymer_dimensions,
+      displacement_fn=displacement,
+      box_size=box_size,
+      r_cutoff=3.0,
+      dr_threshold=0.0)
 
   neighbor = neighbor_fn(positions[0], extra_capacity=6)
 
   @jit
-  def train_energy_fn(params, R):
+  def energy_fn(params, R):
+    """Predict an energy value for an input structure."""
     _neighbor = neighbor_fn(R, neighbor)
-    return energy_fn(params, R, _neighbor)
+    # Consider the first element of the array to be the energy prediction
+    return origami_fn(params, R, _neighbor)[0]
 
-  vectorized_energy_fn = vmap(train_energy_fn, (None, 0))
+  @jit
+  def structure_energy_fn(params, R):
+    """Predict a structure then an energy value for that structure."""
+    _neighbor = neighbor_fn(R, neighbor)
+    # Consider the 2nd through the last of the array to be position predictions
+    structure = origami_fn(params, R, _neighbor)[1:]
+    polymer_shape = (polymer_length, polymer_dimensions)
+    return energy_fn(params, jnp.reshape(structure, polymer_shape))
 
-  grad_fn = grad(train_energy_fn, argnums=1)
+  # Vectorize each of the energy functions
+  vmap_energy_fn = vmap(energy_fn, (None, 0))
+  vmap_structure_energy_fn = vmap(structure_energy_fn, (None, 0))
+
+  grad_fn = grad(energy_fn, argnums=1)
   force_fn = lambda params, R, **kwargs: -grad_fn(params, R)
   vectorized_force_fn = vmap(force_fn, (None, 0))
 
@@ -98,7 +259,7 @@ def _configure_losses(key, batch_size: int, box_size: float,
 
   @jit
   def energy_loss(params, R, energy_targets):
-    return jnp.mean((vectorized_energy_fn(params, R) - energy_targets)**2)
+    return jnp.mean((vmap_energy_fn(params, R) - energy_targets)**2)
 
   @jit
   def force_loss(params, R, force_targets):
@@ -106,9 +267,21 @@ def _configure_losses(key, batch_size: int, box_size: float,
     return jnp.mean(jnp.sum(dforces**2, axis=(1, 2)))
 
   @jit
+  def structure_energy_loss(params, R, energy_targets):
+
+    # The difference in energy between the predicted structure and the
+    # input structure.
+    predicted_structure_energies = vmap_structure_energy_fn(params, R)
+    energy_difference = predicted_structure_energies - energy_targets
+
+    return jnp.mean(energy_difference)
+
+  @jit
   def loss(params, R, targets):
-    return energy_loss(params, R, targets[0]) + force_loss(
-        params, R, targets[1])
+    e = energy_loss(params, R, targets[0])
+    f = force_loss(params, R, targets[1])
+    se = structure_energy_loss(params, R, targets[0])
+    return e + f + se
 
   def error_fn(params, positions, energies):
     return float(jnp.sqrt(energy_loss(params, positions, energies)))
@@ -156,10 +329,16 @@ def train_demo_solver(num_training_steps: int, training_log_every: int,
 
   """
 
+  test_batch = next(demo_example_stream(batch_size=batch_size, split="test"))
+  test_positions, test_energies, test_forces = test_batch
+  _, polymer_length, polymer_dimensions = test_positions.shape
+
   loss, error_fn, params = _configure_losses(
       key,
       batch_size=16,
       box_size=10.862,
+      polymer_length=polymer_length,
+      polymer_dimensions=polymer_dimensions,
       example_stream_fn=demo_example_stream)
 
   update_step, opt = configure_update_step(learning_rate=1e-3, loss=loss)
@@ -170,10 +349,6 @@ def train_demo_solver(num_training_steps: int, training_log_every: int,
                       num_training_steps=num_training_steps)
 
   logging.info("Beginning training run.")
-
-  test_batch = demo_example_stream(batch_size=batch_size,
-                                   split="test").__next__()
-  test_positions, test_energies, test_forces = test_batch
 
   train_example_iterator = demo_example_stream(batch_size, split="train")
 
